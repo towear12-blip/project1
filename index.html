@@ -25,27 +25,23 @@
 
         <div id="settingsPanel" class="mb-6 bg-white rounded-xl shadow-lg p-6 border-2 border-blue-300 hidden">
             <h2 class="text-xl font-semibold mb-4">설정</h2>
-            
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-2">Apps Script URL</label>
                     <input type="text" id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec"
                            class="w-full px-4 py-3 border-2 border-slate-300 rounded-lg">
                 </div>
-                
                 <div class="p-3 bg-slate-50 rounded-lg">
                     <label class="flex items-center gap-2 cursor-pointer mb-2">
                         <input type="checkbox" id="autoRefresh" class="w-4 h-4">
                         <span class="text-sm font-medium">자동 새로고침</span>
                     </label>
-                    
                     <div id="intervalSettings" class="flex items-center gap-2 mt-2 hidden">
                         <label class="text-sm">간격(초):</label>
                         <input type="number" id="refreshInterval" value="30" min="10" max="300"
                                class="w-20 px-2 py-1 border rounded">
                     </div>
                 </div>
-                
                 <button onclick="saveSettings()" class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">
                     설정 저장
                 </button>
@@ -54,7 +50,7 @@
 
         <div id="errorMessage" class="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-lg text-red-700 hidden"></div>
 
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
             <div class="bg-yellow-100 text-yellow-800 border-2 border-yellow-300 rounded-xl p-6 shadow-sm">
                 <div class="flex items-center justify-between mb-2">
                     <span>!</span>
@@ -62,7 +58,6 @@
                 </div>
                 <p class="font-medium text-sm">수리입고 의뢰</p>
             </div>
-
             <div class="bg-orange-100 text-orange-800 border-2 border-orange-300 rounded-xl p-6 shadow-sm">
                 <div class="flex items-center justify-between mb-2">
                     <span>*</span>
@@ -70,7 +65,6 @@
                 </div>
                 <p class="font-medium text-sm">수리입고 완료</p>
             </div>
-
             <div class="bg-blue-100 text-blue-800 border-2 border-blue-300 rounded-xl p-6 shadow-sm">
                 <div class="flex items-center justify-between mb-2">
                     <span>+</span>
@@ -78,7 +72,6 @@
                 </div>
                 <p class="font-medium text-sm">수리완료 출고</p>
             </div>
-
             <div class="bg-green-100 text-green-800 border-2 border-green-300 rounded-xl p-6 shadow-sm">
                 <div class="flex items-center justify-between mb-2">
                     <span>v</span>
@@ -86,7 +79,6 @@
                 </div>
                 <p class="font-medium text-sm">사용중</p>
             </div>
-
             <div class="bg-purple-100 text-purple-800 border-2 border-purple-300 rounded-xl p-6 shadow-sm">
                 <div class="flex items-center justify-between mb-2">
                     <span>📦</span>
@@ -94,6 +86,15 @@
                 </div>
                 <p class="font-medium text-sm">재고</p>
             </div>
+        </div>
+
+        <div class="mb-8 p-4 bg-white rounded-xl shadow-md border border-slate-200">
+            <h3 class="text-sm font-bold text-slate-600 mb-3 flex items-center gap-2">
+                <span class="w-1 h-4 bg-blue-500 rounded-full"></span>
+                배터리 용량별(Ah) 종합 현황
+            </h3>
+            <div id="batterySummary" class="flex flex-wrap gap-3">
+                </div>
         </div>
 
         <div class="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -115,7 +116,7 @@
                             <th class="px-6 py-3 text-left text-sm font-semibold text-slate-700">최종 보고자</th>
                             <th class="px-6 py-3 text-left text-sm font-semibold text-slate-700">최종 업데이트</th>
                             <th class="px-6 py-3 text-left text-sm font-semibold text-slate-700">세부 정보</th>
-                            <th class="px-6 py-3 text-center text-sm font-semibold text-slate-700">이력 수</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-slate-700">관리 상태</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody"></tbody>
@@ -226,15 +227,25 @@
                 '사용중': 0,
                 '재고': 0
             };
+            
+            // 배터리 용량별 합계 저장을 위한 객체
+            var batterySummary = {};
 
             for (var i = 0; i < data.length; i++) {
                 var eq = data[i];
-                console.log(eq);
                 if (summary.hasOwnProperty(eq.status)) {
                     summary[eq.status]++;
                 }
+
+                // 배터리 용량(Ah) 추출 및 집계 (예: "24V 230Ah" -> "230Ah")
+                var batteryLabel = eq.batteryType || "알수없음";
+                var ahMatch = batteryLabel.match(/\d+Ah/i);
+                var ahKey = ahMatch ? ahMatch[0].toLowerCase() : batteryLabel;
+                
+                batterySummary[ahKey] = (batterySummary[ahKey] || 0) + 1;
             }
 
+            // 상단 요약 업데이트
             document.getElementById('count-request').textContent = summary['수리입고 의뢰'];
             document.getElementById('count-complete').textContent = summary['수리입고 완료'];
             document.getElementById('count-release').textContent = summary['수리완료 출고'];
@@ -242,37 +253,53 @@
             document.getElementById('count-stock').textContent = summary['재고'];
             document.getElementById('totalCount').textContent = data.length;
 
+            // 배터리 용량별 요약 UI 생성
+            var batteryContainer = document.getElementById('batterySummary');
+            batteryContainer.innerHTML = '';
+            
+            // 용량순 정렬하여 표시
+            Object.keys(batterySummary).sort().forEach(function(key) {
+                var badge = document.createElement('div');
+                badge.className = 'bg-slate-100 border border-slate-300 px-3 py-1.5 rounded-lg flex items-center gap-2';
+                badge.innerHTML = `
+                    <span class="text-xs font-bold text-slate-500 uppercase">${key}</span>
+                    <span class="text-lg font-bold text-slate-800">${batterySummary[key]}</span>
+                    <span class="text-xs text-slate-400">대</span>
+                `;
+                batteryContainer.appendChild(badge);
+            });
+
+            // 테이블 본문 업데이트
             var tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
 
             for (var i = 0; i < data.length; i++) {
                 var eq = data[i];
 
-                let equipmentId = eq.equipmentId;
-                let serialNumber = eq.serialNumber; //시리얼 넘버
-                let batteryType = eq.batteryType; //배터리 용량
-
                 var config = statusConfig[eq.status] || { color: 'bg-gray-100 text-gray-800 border-gray-300', icon: '?' };
+                
+                // 관리 상태(sheet의 E열) 가져오기. 데이터가 없으면 '미지정' 표시
+                var adminStatus = eq.managementStatus || eq.statusE || "기타"; 
 
                 var row = document.createElement('tr');
-                row.className = 'hover:bg-slate-50 transition-colors';
-                row.innerHTML = '';
-                row.innerHTML += '<td class="px-6 py-4 font-medium">' + serialNumber + '</td>';
-                row.innerHTML += '<td class="px-6 py-4 font-medium">' + batteryType + '</td>';
-                row.innerHTML +=
-                    '<td class="px-6 py-4">' +
-                    '<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ' + config.color + '">' +
-                    config.icon + ' ' + eq.status +
-                    '</span>' +
-                    '</td>' +
-                    '<td class="px-6 py-4">' + eq.reporter + '</td>' +
-                    '<td class="px-6 py-4 text-sm text-slate-600">' + eq.timestamp + '</td>' +
-                    '<td class="px-6 py-4 text-sm">' + eq.details + '</td>' +
-                    '<td class="px-6 py-4 text-center">' +
-                    '<span class="inline-flex items-center justify-center w-8 h-8 bg-slate-100 rounded-full text-sm font-semibold">' +
-                    eq.historyCount +
-                    '</span>' +
-                    '</td>';
+                row.className = 'hover:bg-slate-50 transition-colors border-b border-slate-100';
+                row.innerHTML = `
+                    <td class="px-6 py-4 font-medium">${eq.serialNumber || '-'}</td>
+                    <td class="px-6 py-4">${eq.batteryType || '-'}</td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${config.color}">
+                            ${config.icon} ${eq.status}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">${eq.reporter || '-'}</td>
+                    <td class="px-6 py-4 text-sm text-slate-600">${eq.timestamp || '-'}</td>
+                    <td class="px-6 py-4 text-sm">${eq.details || '-'}</td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="inline-flex items-center justify-center px-3 py-1 bg-slate-800 text-white rounded-md text-xs font-semibold">
+                            ${adminStatus}
+                        </span>
+                    </td>
+                `;
                 tbody.appendChild(row);
             }
         }
