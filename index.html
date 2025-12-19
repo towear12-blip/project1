@@ -3,340 +3,249 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>장비관리 대시보드</title>
+    <title>장비 관리 대시보드</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 부드러운 애니메이션 추가 */
+        #settingsPanel { transition: all 0.3s ease-in-out; }
+    </style>
 </head>
 <body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen p-6">
     <div class="max-w-7xl mx-auto">
         <div class="mb-8">
             <div class="flex justify-between items-center mb-2">
-                <h1 class="text-4xl font-bold text-slate-800">장비관리 대시보드</h1>
+                <h1 class="text-4xl font-bold text-slate-800">장비 관리 대시보드</h1>
                 <div class="flex gap-2">
-                    <button onclick="showSettings()" class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700">
+                    <button onclick="showSettings()" class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 shadow-md transition-all">
                         설정
                     </button>
-                    <button onclick="refreshData()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    <button onclick="refreshData()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-md transition-all">
                         새로고침
                     </button>
                 </div>
             </div>
-            <p id="lastUpdate" class="text-sm text-slate-500"></p>
+            <p id="lastUpdate" class="text-sm text-slate-500">마지막 업데이트: 데이터 없음</p>
         </div>
 
-        <div id="settingsPanel" class="mb-6 bg-white rounded-xl shadow-lg p-6 border-2 border-blue-300 hidden">
-            <h2 class="text-xl font-semibold mb-4">설정</h2>
+        <div id="settingsPanel" class="hidden mb-6 bg-white rounded-xl shadow-2xl p-6 border-2 border-blue-400">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-slate-800">⚙️ 시스템 설정</h2>
+                <button onclick="showSettings()" class="text-slate-400 hover:text-slate-600">✕ 닫기</button>
+            </div>
+            
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-2">Apps Script URL</label>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Google Apps Script API URL</label>
                     <input type="text" id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec"
-                           class="w-full px-4 py-3 border-2 border-slate-300 rounded-lg">
+                           class="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-blue-500 outline-none">
                 </div>
-                <div class="p-3 bg-slate-50 rounded-lg">
-                    <label class="flex items-center gap-2 cursor-pointer mb-2">
-                        <input type="checkbox" id="autoRefresh" class="w-4 h-4">
-                        <span class="text-sm font-medium">자동 새로고침</span>
-                    </label>
-                    <div id="intervalSettings" class="flex items-center gap-2 mt-2 hidden">
-                        <label class="text-sm">간격(초):</label>
-                        <input type="number" id="refreshInterval" value="30" min="10" max="300"
-                               class="w-20 px-2 py-1 border rounded">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="autoRefresh" class="w-5 h-5 cursor-pointer">
+                        <label for="autoRefresh" class="text-sm font-bold text-slate-700 cursor-pointer">자동 새로고침 사용</label>
+                    </div>
+                    <div id="intervalSettings" class="flex items-center gap-2 hidden">
+                        <label class="text-sm font-medium text-slate-600">간격(초):</label>
+                        <input type="number" id="refreshInterval" value="30" min="10" 
+                               class="w-24 px-3 py-1 border rounded-md">
                     </div>
                 </div>
-                <button onclick="saveSettings()" class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">
-                    설정 저장
+                
+                <button onclick="saveSettings()" class="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-lg shadow-lg">
+                    설정 내용 저장 및 적용
                 </button>
             </div>
         </div>
 
-        <div id="errorMessage" class="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-lg text-red-700 hidden"></div>
+        <div id="errorMessage" class="mb-6 p-4 bg-red-100 border-l-4 border-red-500 rounded text-red-700 hidden"></div>
 
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
-            <div class="bg-yellow-100 text-yellow-800 border-2 border-yellow-300 rounded-xl p-6 shadow-sm">
-                <div class="flex items-center justify-between mb-2">
-                    <span>!</span>
-                    <span id="count-request" class="text-3xl font-bold">0</span>
-                </div>
-                <p class="font-medium text-sm">수리입고 의뢰</p>
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8" id="statusGrid">
             </div>
-            <div class="bg-orange-100 text-orange-800 border-2 border-orange-300 rounded-xl p-6 shadow-sm">
-                <div class="flex items-center justify-between mb-2">
-                    <span>*</span>
-                    <span id="count-complete" class="text-3xl font-bold">0</span>
-                </div>
-                <p class="font-medium text-sm">수리입고 완료</p>
-            </div>
-            <div class="bg-blue-100 text-blue-800 border-2 border-blue-300 rounded-xl p-6 shadow-sm">
-                <div class="flex items-center justify-between mb-2">
-                    <span>+</span>
-                    <span id="count-release" class="text-3xl font-bold">0</span>
-                </div>
-                <p class="font-medium text-sm">수리완료 출고</p>
-            </div>
-            <div class="bg-green-100 text-green-800 border-2 border-green-300 rounded-xl p-6 shadow-sm">
-                <div class="flex items-center justify-between mb-2">
-                    <span>U</span>
-                    <span id="count-inuse" class="text-3xl font-bold">0</span>
-                </div>
-                <p class="font-medium text-sm">사용중</p>
-            </div>
-            <div class="bg-purple-100 text-purple-800 border-2 border-purple-300 rounded-xl p-6 shadow-sm">
-                <div class="flex items-center justify-between mb-2">
-                    <span>📦</span>
-                    <span id="count-stock" class="text-3xl font-bold">0</span>
-                </div>
-                <p class="font-medium text-sm">보유</p>
-            </div>
-        </div>
 
-        <div class="mb-8 p-4 bg-white rounded-xl shadow-md border border-slate-200">
-            <h3 class="text-sm font-bold text-slate-600 mb-3 flex items-center gap-2">
-                <span class="w-1 h-4 bg-blue-500 rounded-full"></span>
-                배터리 용량별(Ah) 종합 현황
+        <div class="mb-6 bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+            <h3 class="text-slate-700 font-bold mb-4 flex items-center gap-2">
+                <span class="w-2 h-2 bg-blue-500 rounded-full"></span> 배터리 용량별(Ah) 현황
             </h3>
-            <div id="batterySummary" class="flex flex-wrap gap-3">
+            <div id="batterySummary" class="flex flex-wrap gap-3 text-sm">
                 </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div class="px-6 py-4 bg-slate-800 text-white">
-                <h2 class="text-xl font-semibold">전체 장비 현황 (<span id="totalCount">0</span>대)</h2>
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200">
+            <div class="px-6 py-4 bg-slate-800 flex justify-between items-center">
+                <h2 class="text-white font-bold text-lg">전체 장비 현황 (<span id="totalCount">0</span>대)</h2>
             </div>
-
-            <div id="loadingMessage" class="p-12 text-center text-slate-500">
-                <p class="text-lg mb-2">설정 버튼을 눌러 Apps Script URL을 입력하세요</p>
+            <div id="loadingMessage" class="p-20 text-center text-slate-400">
+                <p>데이터를 불러오려면 '설정'에서 API URL을 입력하세요.</p>
             </div>
-
             <div id="tableContainer" class="overflow-x-auto hidden">
                 <table class="w-full">
-                    <thead class="bg-slate-50 border-b-2 border-slate-200">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
                         <tr>
-                            <th class="px-6 py-3 text-left text-sm font-semibold text-slate-700">Serial NO</th>
-                            <th class="px-6 py-3 text-left text-sm font-semibold text-slate-700">배터리 용량</th>
-                            <th class="px-6 py-3 text-left text-sm font-semibold text-slate-700">현재 상태</th>
-                            <th class="px-6 py-3 text-left text-sm font-semibold text-slate-700">최종 보고자</th>
-                            <th class="px-6 py-3 text-left text-sm font-semibold text-slate-700">최종 업데이트</th>
-                            <th class="px-6 py-3 text-left text-sm font-semibold text-slate-700">세부 정보</th>
-                            <th class="px-6 py-3 text-center text-sm font-semibold text-slate-700">관리 상태</th>
+                            <th class="px-6 py-3 text-left">Serial NO</th>
+                            <th class="px-6 py-3 text-left">배터리 용량</th>
+                            <th class="px-6 py-3 text-left">현재 상태</th>
+                            <th class="px-6 py-3 text-left">최종 보고자</th>
+                            <th class="px-6 py-3 text-left">업데이트일</th>
+                            <th class="px-6 py-3 text-left">세부 정보</th>
+                            <th class="px-6 py-3 text-center">관리 상태 (E열)</th>
                         </tr>
                     </thead>
-                    <tbody id="tableBody"></tbody>
+                    <tbody id="tableBody" class="divide-y divide-slate-100"></tbody>
                 </table>
             </div>
         </div>
     </div>
 
     <script>
-        var refreshTimer = null;
+        let refreshTimer = null;
 
-        var statusConfig = {
-            '수리입고 의뢰': { color: 'bg-yellow-100 text-yellow-800 border-yellow-300', icon: '!' },
-            '수리입고 완료': { color: 'bg-orange-100 text-orange-800 border-orange-300', icon: '*' },
-            '수리완료 출고': { color: 'bg-blue-100 text-blue-800 border-blue-300', icon: '+' },
-            '사용중': { color: 'bg-green-100 text-green-800 border-green-300', icon: 'v' },
-            '재고': { color: 'bg-purple-100 text-purple-800 border-purple-300', icon: '📦' }
-        };
+        // 1. 설정 패널 토글 함수 (확실하게 작동하도록 수정)
+        function showSettings() {
+            const panel = document.getElementById('settingsPanel');
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+            } else {
+                panel.classList.add('hidden');
+            }
+        }
 
+        // 2. 설정 로드
         function loadSettings() {
-            var url = localStorage.getItem('equipmentApiUrl');
-            var autoRefresh = localStorage.getItem('equipmentAutoRefresh') === 'true';
-            var interval = localStorage.getItem('equipmentRefreshInterval') || '30';
+            const url = localStorage.getItem('equipmentApiUrl');
+            const auto = localStorage.getItem('equipmentAutoRefresh') === 'true';
+            const interval = localStorage.getItem('equipmentRefreshInterval') || '30';
 
             if (url) {
                 document.getElementById('apiUrl').value = url;
-                refreshData();
+                refreshData(); // 저장된 URL이 있으면 즉시 새로고침
             }
-
-            document.getElementById('autoRefresh').checked = autoRefresh;
+            document.getElementById('autoRefresh').checked = auto;
             document.getElementById('refreshInterval').value = interval;
-
-            if (autoRefresh) {
+            
+            if (auto) {
                 document.getElementById('intervalSettings').classList.remove('hidden');
                 startAutoRefresh();
             }
         }
 
-        function showSettings() {
-            var panel = document.getElementById('settingsPanel');
-            panel.classList.toggle('hidden');
-        }
-
+        // 3. 설정 저장
         function saveSettings() {
-            var url = document.getElementById('apiUrl').value.trim();
-            var autoRefresh = document.getElementById('autoRefresh').checked;
-            var interval = document.getElementById('refreshInterval').value;
+            const url = document.getElementById('apiUrl').value.trim();
+            const auto = document.getElementById('autoRefresh').checked;
+            const interval = document.getElementById('refreshInterval').value;
 
             if (!url) {
-                alert('URL을 입력하세요!');
+                alert("⚠️ API URL을 입력해 주세요.");
                 return;
             }
 
             localStorage.setItem('equipmentApiUrl', url);
-            localStorage.setItem('equipmentAutoRefresh', autoRefresh);
+            localStorage.setItem('equipmentAutoRefresh', auto);
             localStorage.setItem('equipmentRefreshInterval', interval);
 
-            alert('설정이 저장되었습니다!');
-            document.getElementById('settingsPanel').classList.add('hidden');
+            alert("✅ 설정이 저장되었습니다.");
+            showSettings(); // 패널 닫기
 
-            if (autoRefresh) {
-                startAutoRefresh();
-            } else {
-                stopAutoRefresh();
-            }
+            if (auto) startAutoRefresh();
+            else stopAutoRefresh();
 
             refreshData();
         }
 
-        function refreshData() {
-            var url = document.getElementById('apiUrl').value.trim() || localStorage.getItem('equipmentApiUrl');
-
-            if (!url) {
-                showError('Apps Script URL을 설정하세요!');
-                return;
-            }
+        // 4. 데이터 새로고침 및 렌더링 (E열 관리상태 포함)
+        async function refreshData() {
+            const url = localStorage.getItem('equipmentApiUrl');
+            if (!url) return;
 
             hideError();
-
-            fetch(url)
-                .then(function(response) {
-                    if (!response.ok) {
-                        throw new Error('데이터를 가져올 수 없습니다. URL을 확인하세요.');
-                    }
-                    return response.json();
-                })
-                .then(function(result) {
-                    if (result.success && result.data) {
-                        updateDashboard(result.data);
-                        document.getElementById('lastUpdate').textContent = '마지막 업데이트: ' + new Date().toLocaleString('ko-KR');
-                    } else {
-                        throw new Error('데이터 형식이 올바르지 않습니다.');
-                    }
-                })
-                .catch(function(error) {
-                    showError('오류: ' + error.message);
-                });
+            try {
+                const response = await fetch(url);
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderDashboard(result.data);
+                    document.getElementById('lastUpdate').innerText = `마지막 업데이트: ${new Date().toLocaleString()}`;
+                }
+            } catch (e) {
+                showError("데이터 로딩 실패: URL을 확인하거나 CORS 설정을 확인하세요.");
+            }
         }
 
-        function updateDashboard(data) {
+        function renderDashboard(data) {
             document.getElementById('loadingMessage').classList.add('hidden');
             document.getElementById('tableContainer').classList.remove('hidden');
 
-            var summary = {
-                '수리입고 의뢰': 0,
-                '수리입고 완료': 0,
-                '수리완료 출고': 0,
-                '사용중': 0,
-                '보유': 0
-            };
-            
-            // 배터리 용량별 합계 저장을 위한 객체
-            var batterySummary = {};
-
-            for (var i = 0; i < data.length; i++) {
-                var eq = data[i];
-                if (summary.hasOwnProperty(eq.status)) {
-                    summary[eq.status]++;
-                }
-
-                // 배터리 용량(Ah) 추출 및 집계 (예: "24V 230Ah" -> "230Ah")
-                var batteryLabel = eq.batteryType || "알수없음";
-                var ahMatch = batteryLabel.match(/\d+Ah/i);
-                var ahKey = ahMatch ? ahMatch[0].toLowerCase() : batteryLabel;
-                
-                batterySummary[ahKey] = (batterySummary[ahKey] || 0) + 1;
-            }
-
-            // 상단 요약 업데이트
-            document.getElementById('count-request').textContent = summary['수리입고 의뢰'];
-            document.getElementById('count-complete').textContent = summary['수리입고 완료'];
-            document.getElementById('count-release').textContent = summary['수리완료 출고'];
-            document.getElementById('count-inuse').textContent = summary['사용중'];
-            document.getElementById('count-stock').textContent = summary[ary['보유']; 
-            document.getElementByIytotalCount').textContent = data.length;
-
-            // 배터리 용량별 요약 UI 생성
-            var batteryContainer = document.getElementById('batterySummary');
-            batteryContainer.innerHTML = '';
-            
-            // 용량순 정렬하여 표시
-            Object.keys(batterySummary).sort().forEach(function(key) {
-                var badge = document.createElement('div');
-                badge.className = 'bg-slate-100 border border-slate-300 px-3 py-1.5 rounded-lg flex items-center gap-2';
-                badge.innerHTML = `
-                    <span class="text-xs font-bold text-slate-500 uppercase">${key}</span>
-                    <span class="text-lg font-bold text-slate-800">${batterySummary[key]}</span>
-                    <span class="text-xs text-slate-400">대</span>
-                `;
-                batteryContainer.appendChild(badge);
-            });
-
-            // 테이블 본문 업데이트
-            var tbody = document.getElementById('tableBody');
+            const tbody = document.getElementById('tableBody');
+            const batteryDiv = document.getElementById('batterySummary');
             tbody.innerHTML = '';
+            batteryDiv.innerHTML = '';
 
-            for (var i = 0; i < data.length; i++) {
-                var eq = data[i];
+            let batteryMap = {};
 
-                var config = statusConfig[eq.status] || { color: 'bg-gray-100 text-gray-800 border-gray-300', icon: '?' };
-                
-                // 관리 상태(sheet의 E열) 가져오기. 데이터가 없으면 '미지정' 표시
-                var adminStatus = eq.managementStatus || eq.statusE || "기타"; 
+            data.forEach(item => {
+                // Ah 추출 로직 (| 뒤의 문자열에서 숫자Ah 찾기)
+                const ahMatch = (item.batteryType || "").match(/\d+Ah/i);
+                const ah = ahMatch ? ahMatch[0].toUpperCase() : "기타";
+                batteryMap[ah] = (batteryMap[ah] || 0) + 1;
 
-                var row = document.createElement('tr');
-                row.className = 'hover:bg-slate-50 transition-colors border-b border-slate-100';
+                // 테이블 행 생성
+                const row = document.createElement('tr');
+                row.className = "hover:bg-slate-50 transition-colors";
                 row.innerHTML = `
-                    <td class="px-6 py-4 font-medium">${eq.serialNumber || '-'}</td>
-                    <td class="px-6 py-4">${eq.batteryType || '-'}</td>
-                    <td class="px-6 py-4">
-                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${config.color}">
-                            ${config.icon} ${eq.status}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4">${eq.reporter || '-'}</td>
-                    <td class="px-6 py-4 text-sm text-slate-600">${eq.timestamp || '-'}</td>
-                    <td class="px-6 py-4 text-sm">${eq.details || '-'}</td>
+                    <td class="px-6 py-4 font-semibold text-slate-700">${item.serialNumber || '-'}</td>
+                    <td class="px-6 py-4 text-slate-500 text-sm">${item.batteryType || '-'}</td>
+                    <td class="px-6 py-4"><span class="px-2 py-1 rounded-full bg-blue-50 text-blue-700 text-xs border border-blue-200 font-medium">${item.status}</span></td>
+                    <td class="px-6 py-4 text-sm">${item.reporter || '-'}</td>
+                    <td class="px-6 py-4 text-sm text-slate-400">${item.timestamp || '-'}</td>
+                    <td class="px-6 py-4 text-sm">${item.details || '-'}</td>
                     <td class="px-6 py-4 text-center">
-                        <span class="inline-flex items-center justify-center px-3 py-1 bg-slate-800 text-white rounded-md text-xs font-semibold">
-                            ${adminStatus}
+                        <span class="px-3 py-1 bg-slate-800 text-white rounded text-xs font-bold ring-2 ring-slate-100">
+                            ${item.managementStatus || '미정'}
                         </span>
                     </td>
                 `;
                 tbody.appendChild(row);
-            }
+            });
+
+            // 배터리 요약 UI 생성
+            Object.keys(batteryMap).sort().forEach(key => {
+                batteryDiv.innerHTML += `
+                    <div class="bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg">
+                        <span class="font-bold text-blue-600">${key}:</span> ${batteryMap[key]}대
+                    </div>
+                `;
+            });
+
+            document.getElementById('totalCount').innerText = data.length;
         }
 
-        function showError(message) {
-            var errorDiv = document.getElementById('errorMessage');
-            errorDiv.textContent = message;
-            errorDiv.classList.remove('hidden');
+        function startAutoRefresh() {
+            stopAutoRefresh();
+            const sec = document.getElementById('refreshInterval').value || 30;
+            refreshTimer = setInterval(refreshData, sec * 1000);
+        }
+
+        function stopAutoRefresh() {
+            if (refreshTimer) clearInterval(refreshTimer);
+        }
+
+        function showError(m) {
+            const err = document.getElementById('errorMessage');
+            err.innerText = m;
+            err.classList.remove('hidden');
         }
 
         function hideError() {
             document.getElementById('errorMessage').classList.add('hidden');
         }
 
-        function startAutoRefresh() {
-            stopAutoRefresh();
-            var interval = parseInt(document.getElementById('refreshInterval').value) * 1000;
-            refreshTimer = setInterval(refreshData, interval);
-        }
-
-        function stopAutoRefresh() {
-            if (refreshTimer) {
-                clearInterval(refreshTimer);
-                refreshTimer = null;
-            }
-        }
-
-        document.getElementById('autoRefresh').addEventListener('change', function(e) {
-            var intervalSettings = document.getElementById('intervalSettings');
-            if (e.target.checked) {
-                intervalSettings.classList.remove('hidden');
-            } else {
-                intervalSettings.classList.add('hidden');
-            }
+        // 체크박스 변경 시 설정창 즉시 업데이트
+        document.getElementById('autoRefresh').addEventListener('change', (e) => {
+            document.getElementById('intervalSettings').classList.toggle('hidden', !e.target.checked);
         });
 
-        window.addEventListener('load', loadSettings);
+        window.onload = loadSettings;
     </script>
 </body>
 </html>
